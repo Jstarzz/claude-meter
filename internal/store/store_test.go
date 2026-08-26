@@ -18,7 +18,7 @@ func TestInsertAndAggregate(t *testing.T) {
 	now := time.Now().UTC()
 	e := otel.Event{
 		EventKey: "one", EventName: "api_request", EventTime: now, EventSequence: 1,
-		PersonID: "josiah", DeviceName: "desktop-josiah", AccountUUID: "acct1", AccountEmail: "a@example.com",
+		PersonID: "developer-a", DeviceName: "workstation-a", AccountUUID: "acct1", AccountEmail: "dev-a@example.com",
 		SessionID: "s1", Model: "claude-sonnet-5", InputTokens: 100, OutputTokens: 20, CacheReadTokens: 500, CostUSDMicros: 123456,
 	}
 	n, err := st.Insert(context.Background(), []otel.Event{e, e})
@@ -28,14 +28,14 @@ func TestInsertAndAggregate(t *testing.T) {
 	if n != 1 {
 		t.Fatalf("dedupe: inserted %d, want 1", n)
 	}
-	totals, err := st.Totals(context.Background(), nil, "josiah")
+	totals, err := st.Totals(context.Background(), nil, "developer-a")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if totals.Requests != 1 || totals.InputTokens != 100 || totals.CostUSDMicros != 123456 {
 		t.Fatalf("bad totals: %+v", totals)
 	}
-	accounts, err := st.ByAccount(context.Background(), nil, "josiah")
+	accounts, err := st.ByAccount(context.Background(), nil, "developer-a")
 	if err != nil {
 		t.Fatal(err)
 	}
