@@ -26,41 +26,87 @@ type Resolver struct {
 }
 
 func (r Resolver) Resolve() (Identity, error) {
-	sourceIP := sourceIPFromSSH(os.Getenv("SSH_CONNECTION"))
+	sourceIP := sourceIPFromEnvironment()
 	if sourceIP == "" {
-		if r.Config.LocalPerson != "" {
-			return Identity{Person: r.Config.LocalPerson, Device: "local"}, nil
+		person := strings.TrimSpace(r.Config.LocalPerson)
+		if person == "" {
+			person = "unknown"
 		}
-		return Identity{}, errors.New("SSH_CONNECTION is empty and local_person is not configured")
+		return Identity{Person: person, Device: "local"}, nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+	fallback := Identity{Person: "unknown", Device: "unresolved", SourceIP: sourceIP}
+	ctx, cancel := context.WithTimeout(context.Background(), 1500*time.Millisecond)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, r.Config.TailscaleBin, "whois", "--json", sourceIP)
 	out, err := cmd.Output()
 	if err != nil {
-		return Identity{}, fmt.Errorf("tailscale whois %s: %w", sourceIP, err)
+		return fallback, nil
 	}
 
 	device, nodeID, err := parseWhois(out)
 	if err != nil {
-		return Identity{}, err
+		return fallback, nil
 	}
 	normalized := config.NormalizeDevice(device)
-	person, ok := r.Config.Devices[normalized]
-	if !ok {
-		return Identity{}, fmt.Errorf("unmapped Tailscale device %q (source %s)", device, sourceIP)
+	if normalized == "" {
+		return fallback, nil
 	}
-	return Identity{Person: person, Device: normalized, NodeID: nodeID, SourceIP: sourceIP}, nil
+	fallback.Device = normalized
+	fallback.NodeID = nodeID
+	if person := strings.TrimSpace(r.Config.Devices[normalized]); person != "" {
+		fallback.Person = person
+	}
+	return fallback, nil
+}
+
+func sourceIPFromEnvironment() string {
+	if os.Getenv("TMUX") != "" {
+		if ip := sourceIPFromTMUX(); ip != "" {
+			return ip
+		}
+	}
+	if ip := sourceIPFromSSH(os.Getenv("SSH_CONNECTION")); ip != "" {
+		return ip
+	}
+	if ip := sourceIPFromSSH(os.Getenv("SSH_CLIENT")); ip != "" {
+		return ip
+	}
+	if ip := net.ParseIP(strings.TrimSpace(os.Getenv("MOSH_IP"))); ip != nil {
+		return ip.String()
+	}
+	return ""
+}
+
+func sourceIPFromTMUX() string {
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer cancel()
+	for _, key := range []string{"SSH_CONNECTION", "SSH_CLIENT"} {
+		cmd := exec.CommandContext(ctx, "tmux", "show-environment", key)
+		out, err := cmd.Output()
+		if err != nil {
+			continue
+		}
+		line := strings.TrimSpace(string(out))
+		if strings.HasPrefix(line, "-") {
+			continue
+		}
+		if i := strings.IndexByte(line, '='); i >= 0 {
+			line = line[i+1:]
+		}
+		if ip := sourceIPFromSSH(line); ip != "" {
+			return ip
+		}
+	}
+	return ""
 }
 
 func sourceIPFromSSH(v string) string {
 	fields := strings.Fields(v)
-	if len(fields) < 4 {
+	if len(fields) == 0 {
 		return ""
 	}
-	host := fields[0]
-	if ip := net.ParseIP(host); ip != nil {
+	if ip := net.ParseIP(fields[0]); ip != nil {
 		return ip.String()
 	}
 	return ""
