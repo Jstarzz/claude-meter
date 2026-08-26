@@ -67,9 +67,6 @@ func LoadLauncher(path string) (Launcher, error) {
 	if cfg.Endpoint == "" || cfg.IngestToken == "" || cfg.ClaudeBinary == "" {
 		return Launcher{}, errors.New("endpoint, ingest_token, and claude_binary are required")
 	}
-	if len(cfg.Devices) == 0 && cfg.LocalPerson == "" {
-		return Launcher{}, errors.New("at least one device mapping or local_person is required")
-	}
 	normalized := make(map[string]string, len(cfg.Devices))
 	for device, person := range cfg.Devices {
 		d := normalizeDevice(device)
