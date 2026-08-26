@@ -1,15 +1,12 @@
 {
-  "endpoint": "http://claude-meter:8787",
+  "endpoint": "http://10.0.0.50:8787",
   "ingest_token": "REPLACE_WITH_THE_SAME_LONG_RANDOM_TOKEN",
   "claude_binary": "/usr/local/bin/claude-real",
   "tailscale_binary": "tailscale",
   "local_person": "",
   "devices": {
-    "desktop-josiah": "josiah",
-    "brandons-macbook-pro": "brandon",
-    "him-092507": "yhaneal",
-    "rich23": "richard",
-    "richards-macbook-air": "richard",
-    "richards-pc": "richard"
+    "workstation-a": "developer-a",
+    "laptop-b": "developer-b",
+    "desktop-c": "developer-c"
   }
 }
