@@ -9,23 +9,23 @@ import (
 )
 
 func TestParseWhois(t *testing.T) {
-	raw := []byte(`{"Node":{"ID":123,"StableID":"nAbCd","ComputedName":"desktop-josiah"},"UserProfile":{"LoginName":"info@example.com"}}`)
+	raw := []byte(`{"Node":{"ID":123,"StableID":"nAbCd","ComputedName":"workstation-a"},"UserProfile":{"LoginName":"dev@example.com"}}`)
 	device, nodeID, err := parseWhois(raw)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if device != "desktop-josiah" || nodeID != "nAbCd" {
+	if device != "workstation-a" || nodeID != "nAbCd" {
 		t.Fatalf("got %q %q", device, nodeID)
 	}
 }
 
 func TestSourceIPFromSSH(t *testing.T) {
 	for _, v := range []string{
-		"100.108.157.80 53124 100.109.68.120 22",
-		"100.108.157.80 53124 22",
-		"100.108.157.80",
+		"100.64.0.10 53124 100.64.0.20 22",
+		"100.64.0.10 53124 22",
+		"100.64.0.10",
 	} {
-		if got := sourceIPFromSSH(v); got != "100.108.157.80" {
+		if got := sourceIPFromSSH(v); got != "100.64.0.10" {
 			t.Fatalf("got %q from %q", got, v)
 		}
 	}
@@ -47,11 +47,11 @@ func TestResolveLocalUnknown(t *testing.T) {
 
 func TestResolveLocalPerson(t *testing.T) {
 	clearRemoteEnv(t)
-	id, err := (Resolver{Config: config.Launcher{LocalPerson: "josiah"}}).Resolve()
+	id, err := (Resolver{Config: config.Launcher{LocalPerson: "developer-a"}}).Resolve()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if id.Person != "josiah" || id.Device != "local" {
+	if id.Person != "developer-a" || id.Device != "local" {
 		t.Fatalf("got %+v", id)
 	}
 }
@@ -84,12 +84,12 @@ func TestResolveUnknownDevice(t *testing.T) {
 func TestResolveKnownDevice(t *testing.T) {
 	clearRemoteEnv(t)
 	t.Setenv("SSH_CONNECTION", "100.64.0.10 50000 100.64.0.20 22")
-	bin := fakeCommand(t, `{"Node":{"StableID":"node-1","ComputedName":"desktop-josiah"}}`)
-	id, err := (Resolver{Config: config.Launcher{TailscaleBin: bin, Devices: map[string]string{"desktop-josiah": "josiah"}}}).Resolve()
+	bin := fakeCommand(t, `{"Node":{"StableID":"node-1","ComputedName":"workstation-a"}}`)
+	id, err := (Resolver{Config: config.Launcher{TailscaleBin: bin, Devices: map[string]string{"workstation-a": "developer-a"}}}).Resolve()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if id.Person != "josiah" || id.Device != "desktop-josiah" {
+	if id.Person != "developer-a" || id.Device != "workstation-a" {
 		t.Fatalf("got %+v", id)
 	}
 }
