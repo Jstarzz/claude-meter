@@ -65,6 +65,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/summary", s.summaryAPI)
 	mux.HandleFunc("GET /api/history", s.historyAPI)
 	mux.HandleFunc("GET /static/style.css", s.style)
+	mux.HandleFunc("GET /static/app.js", s.script)
 	mux.HandleFunc("GET /", s.dashboard)
 	return securityHeaders(mux)
 }
@@ -169,12 +170,20 @@ func (s *Server) health(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) style(w http.ResponseWriter, r *http.Request) {
-	b, err := webassets.Files.ReadFile("static/style.css")
+	s.serveStatic(w, "static/style.css", "text/css; charset=utf-8")
+}
+
+func (s *Server) script(w http.ResponseWriter, r *http.Request) {
+	s.serveStatic(w, "static/app.js", "text/javascript; charset=utf-8")
+}
+
+func (s *Server) serveStatic(w http.ResponseWriter, path, contentType string) {
+	b, err := webassets.Files.ReadFile(path)
 	if err != nil {
-		http.NotFound(w, r)
+		http.NotFound(w, nil)
 		return
 	}
-	w.Header().Set("Content-Type", "text/css; charset=utf-8")
+	w.Header().Set("Content-Type", contentType)
 	w.Header().Set("Cache-Control", "no-cache")
 	_, _ = w.Write(b)
 }
@@ -219,6 +228,7 @@ func normalizeRange(v string) string {
 		return "7d"
 	}
 }
+
 func rangeStart(rng string, now time.Time) *time.Time {
 	var t time.Time
 	switch rng {
@@ -234,10 +244,12 @@ func rangeStart(rng string, now time.Time) *time.Time {
 	t = t.UTC()
 	return &t
 }
+
 func writeJSON(w http.ResponseWriter, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(v)
 }
+
 func formatTokens(v int64) string {
 	switch {
 	case v >= 1_000_000_000:
@@ -250,6 +262,7 @@ func formatTokens(v int64) string {
 		return strconv.FormatInt(v, 10)
 	}
 }
+
 func shortID(v string) string {
 	if len(v) > 12 {
 		return v[:12] + "..."
@@ -259,6 +272,7 @@ func shortID(v string) string {
 	}
 	return v
 }
+
 func humanAgo(d time.Duration) string {
 	if d < time.Minute {
 		return "now"
@@ -271,12 +285,13 @@ func humanAgo(d time.Duration) string {
 	}
 	return fmt.Sprintf("%dd", int(d.Hours()/24))
 }
+
 func securityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("X-Frame-Options", "DENY")
 		w.Header().Set("Referrer-Policy", "no-referrer")
-		w.Header().Set("Content-Security-Policy", "default-src 'self'; style-src 'self'; script-src 'none'; img-src 'self' data:; frame-ancestors 'none'")
+		w.Header().Set("Content-Security-Policy", "default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'")
 		next.ServeHTTP(w, r)
 	})
 }
