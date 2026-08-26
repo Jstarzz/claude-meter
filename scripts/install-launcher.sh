@@ -2,9 +2,12 @@
 set -eu
 [ "$(id -u)" -eq 0 ] || { echo "run as root" >&2; exit 1; }
 BIN="${1:-./claude-meter}"
-REQUESTED_CLAUDE="${2:-$(command -v claude || true)}"
+CURRENT_CLAUDE="$(command -v claude || true)"
+REQUESTED_CLAUDE="${2:-$CURRENT_CLAUDE}"
 [ -n "$REQUESTED_CLAUDE" ] || { echo "Claude binary not found; pass it as argument 2" >&2; exit 1; }
 REAL_CLAUDE="$(readlink -f "$REQUESTED_CLAUDE")"
+CURRENT_REAL=""
+[ -z "$CURRENT_CLAUDE" ] || CURRENT_REAL="$(readlink -f "$CURRENT_CLAUDE")"
 
 install -Dm755 "$BIN" /usr/local/lib/claude-meter/claude-meter
 install -d -m 0755 /etc/claude-meter
@@ -26,9 +29,9 @@ exec /usr/local/lib/claude-meter/claude-meter launch -config /etc/claude-meter/l
 SH
 chmod 0755 /usr/local/bin/claude
 
-if [ "$REQUESTED_CLAUDE" != "/usr/local/bin/claude" ]; then
-  rm -f "$REQUESTED_CLAUDE"
-  ln -s /usr/local/bin/claude "$REQUESTED_CLAUDE"
+if [ -n "$CURRENT_CLAUDE" ] && [ "$CURRENT_CLAUDE" != "/usr/local/bin/claude" ] && [ "$CURRENT_REAL" = "$(readlink -f "$REQUESTED_CLAUDE")" ]; then
+  rm -f "$CURRENT_CLAUDE"
+  ln -s /usr/local/bin/claude "$CURRENT_CLAUDE"
 fi
 
 echo "Installed metered Claude launcher -> $REAL_CLAUDE"
