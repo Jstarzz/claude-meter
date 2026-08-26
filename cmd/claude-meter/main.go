@@ -44,7 +44,7 @@ func usage() {
 
 Usage:
   claude-meter serve    [-config /etc/claude-meter/server.json]
-  claude-meter launch   [-config /etc/claude-meter/launcher.json] [claude args...]
+  claude-meter launch   [-config /etc/claude-meter/launcher.json] [-fallback-bin /path/to/claude] [--] [claude args...]
   claude-meter identify [-config /etc/claude-meter/launcher.json]
   claude-meter version`)
 }
@@ -85,13 +85,20 @@ func serve(args []string) {
 }
 
 func launch(args []string) {
-	fs := flag.NewFlagSet("launch", flag.ExitOnError)
-	cfgPath := fs.String("config", "/etc/claude-meter/launcher.json", "launcher config path")
-	_ = fs.Parse(args)
-	cfg, err := config.LoadLauncher(*cfgPath)
-	fatal(err)
+	cfgPath, fallbackBin, claudeArgs := parseLaunchArgs(args)
+	if fallbackBin == "" {
+		fallbackBin = os.Getenv("CLAUDE_METER_FALLBACK_BINARY")
+	}
+
+	cfg, err := config.LoadLauncher(cfgPath)
+	if err != nil {
+		execClaude(fallbackBin, claudeArgs, os.Environ(), err)
+	}
+
 	id, err := identity.Resolver{Config: cfg}.Resolve()
-	fatal(err)
+	if err != nil {
+		id = identity.Identity{Person: "unknown", Device: "unresolved"}
+	}
 
 	env := setEnv(os.Environ(), map[string]string{
 		"CLAUDE_CODE_ENABLE_TELEMETRY":     "1",
@@ -106,10 +113,68 @@ func launch(args []string) {
 		"OTEL_LOG_RAW_API_BODIES":          "0",
 		"OTEL_RESOURCE_ATTRIBUTES":         identity.ResourceAttributes(id, os.Getenv("OTEL_RESOURCE_ATTRIBUTES")),
 	})
+
 	bin, err := exec.LookPath(cfg.ClaudeBinary)
-	fatal(err)
-	argv := append([]string{bin}, fs.Args()...)
+	if err != nil {
+		execClaude(fallbackBin, claudeArgs, os.Environ(), err)
+	}
+	argv := append([]string{bin}, claudeArgs...)
 	if err := syscall.Exec(bin, argv, env); err != nil {
+		execClaude(fallbackBin, claudeArgs, os.Environ(), err)
+	}
+}
+
+func parseLaunchArgs(args []string) (string, string, []string) {
+	cfgPath := "/etc/claude-meter/launcher.json"
+	fallback := ""
+	for len(args) > 0 {
+		switch {
+		case args[0] == "--":
+			return cfgPath, fallback, args[1:]
+		case args[0] == "-config" || args[0] == "--config":
+			if len(args) < 2 {
+				return cfgPath, fallback, args
+			}
+			cfgPath = args[1]
+			args = args[2:]
+		case strings.HasPrefix(args[0], "-config="):
+			cfgPath = strings.TrimPrefix(args[0], "-config=")
+			args = args[1:]
+		case strings.HasPrefix(args[0], "--config="):
+			cfgPath = strings.TrimPrefix(args[0], "--config=")
+			args = args[1:]
+		case args[0] == "-fallback-bin" || args[0] == "--fallback-bin":
+			if len(args) < 2 {
+				return cfgPath, fallback, args
+			}
+			fallback = args[1]
+			args = args[2:]
+		case strings.HasPrefix(args[0], "-fallback-bin="):
+			fallback = strings.TrimPrefix(args[0], "-fallback-bin=")
+			args = args[1:]
+		case strings.HasPrefix(args[0], "--fallback-bin="):
+			fallback = strings.TrimPrefix(args[0], "--fallback-bin=")
+			args = args[1:]
+		default:
+			return cfgPath, fallback, args
+		}
+	}
+	return cfgPath, fallback, nil
+}
+
+func execClaude(bin string, args, env []string, cause error) {
+	if strings.TrimSpace(bin) == "" {
+		fatal(cause)
+	}
+	resolved, err := exec.LookPath(bin)
+	if err != nil {
+		fatal(fmt.Errorf("meter failed (%v), fallback Claude failed: %w", cause, err))
+	}
+	if os.Getenv("CLAUDE_METER_DEBUG") != "" {
+		fmt.Fprintln(os.Stderr, "claude-meter: falling back to Claude:", cause)
+	}
+	argv := append([]string{resolved}, args...)
+	if err := syscall.Exec(resolved, argv, env); err != nil {
 		fatal(err)
 	}
 }
@@ -149,6 +214,7 @@ func setEnv(base []string, updates map[string]string) []string {
 	}
 	return out
 }
+
 func fatal(err error) {
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "claude-meter:", err)
