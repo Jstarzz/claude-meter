@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="refresh" content="20">
+  <title>{{.Title}}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main class="shell">
+  <header>
+    <div><div class="eyebrow">BUGHUNTINC / INTERNAL</div><h1>{{.Title}}</h1></div>
+    <div class="live"><span></span> auto-refresh 20s</div>
+  </header>
+
+  <nav class="filters">
+    <div class="ranges">
+      <a class="{{if eq .Range "24h"}}active{{end}}" href="/?range=24h{{if .Person}}&person={{.Person}}{{end}}">24h</a>
+      <a class="{{if eq .Range "7d"}}active{{end}}" href="/?range=7d{{if .Person}}&person={{.Person}}{{end}}">7d</a>
+      <a class="{{if eq .Range "30d"}}active{{end}}" href="/?range=30d{{if .Person}}&person={{.Person}}{{end}}">30d</a>
+      <a class="{{if eq .Range "all"}}active{{end}}" href="/?range=all{{if .Person}}&person={{.Person}}{{end}}">all</a>
+    </div>
+    {{if .Person}}<a class="clear" href="/?range={{.Range}}">× {{.Person}}</a>{{end}}
+  </nav>
+
+  <section class="hero-grid">
+    <article class="hero"><span>API-equivalent cost</span><strong>{{money .Totals.CostUSDMicros}}</strong><small>estimated by Claude Code</small></article>
+    <article><span>Requests</span><strong>{{.Totals.Requests}}</strong><small>{{.Totals.Sessions}} sessions</small></article>
+    <article><span>Input</span><strong>{{tokens .Totals.InputTokens}}</strong><small>tokens</small></article>
+    <article><span>Output</span><strong>{{tokens .Totals.OutputTokens}}</strong><small>tokens</small></article>
+    <article><span>Cache read</span><strong>{{tokens .Totals.CacheReadTokens}}</strong><small>tokens</small></article>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2>People</h2><span>click to filter</span></div>
+    <div class="people-grid">
+      {{range .People}}
+      <a class="person-card" href="/?range={{$.Range}}&person={{.Person}}">
+        <div><strong>{{.Person}}</strong><span>{{.Sessions}} sessions · {{.Requests}} req</span></div>
+        <div class="right"><strong>{{money .CostUSDMicros}}</strong><span>{{tokens .OutputTokens}} out</span></div>
+      </a>
+      {{else}}<div class="empty">No usage yet.</div>{{end}}
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2>Accounts{{if .Person}} · {{.Person}}{{end}}</h2><span>Claude OAuth identity</span></div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Account</th><th>Requests</th><th>Sessions</th><th>Input</th><th>Output</th><th>Cache read</th><th>Cost</th></tr></thead>
+      <tbody>{{range .Accounts}}<tr><td><b>{{if .AccountEmail}}{{.AccountEmail}}{{else}}{{short .AccountUUID}}{{end}}</b><small>{{short .AccountUUID}}</small></td><td>{{.Requests}}</td><td>{{.Sessions}}</td><td>{{tokens .InputTokens}}</td><td>{{tokens .OutputTokens}}</td><td>{{tokens .CacheReadTokens}}</td><td class="money">{{money .CostUSDMicros}}</td></tr>{{else}}<tr><td colspan="7" class="empty">No account usage yet.</td></tr>{{end}}</tbody>
+    </table></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2>History</h2><span>latest 100 events</span></div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>When</th><th>Person</th><th>Account</th><th>Model</th><th>Session</th><th>Tokens in/out</th><th>Cache</th><th>Duration</th><th>Cost</th></tr></thead>
+      <tbody>{{range .History}}<tr class="{{if eq .EventName "api_error"}}error{{end}}"><td>{{ago .Time}}</td><td><b>{{.Person}}</b><small>{{.Device}}</small></td><td>{{if .AccountEmail}}{{.AccountEmail}}{{else}}{{short .AccountUUID}}{{end}}</td><td>{{.Model}}<small>{{.Effort}} {{.QuerySource}}</small></td><td>{{short .SessionID}}</td><td>{{tokens .InputTokens}} / {{tokens .OutputTokens}}</td><td>{{tokens .CacheReadTokens}}</td><td>{{ms .DurationMS}}</td><td class="money">{{if eq .EventName "api_error"}}ERR{{else}}{{money .CostUSDMicros}}{{end}}</td></tr>{{else}}<tr><td colspan="9" class="empty">No telemetry has arrived yet.</td></tr>{{end}}</tbody>
+    </table></div>
+  </section>
+
+  <footer>Generated {{.Generated.Format "2006-01-02 15:04:05 MST"}} · prompt/response content is not collected</footer>
+</main>
+</body></html>

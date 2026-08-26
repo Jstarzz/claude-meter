@@ -1,0 +1,7 @@
+{
+  "listen": "0.0.0.0:8787",
+  "database": "/var/lib/claude-meter/usage.db",
+  "ingest_token": "REPLACE_WITH_A_LONG_RANDOM_TOKEN",
+  "retention_days": 0,
+  "title": "Claude Meter"
+}

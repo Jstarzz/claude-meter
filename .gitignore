@@ -1,0 +1,7 @@
+/claude-meter
+*.db
+*.db-shm
+*.db-wal
+.env
+server.json
+launcher.json
