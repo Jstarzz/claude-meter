@@ -42,6 +42,7 @@ func New(cfg config.Server, st *store.Store, logger *slog.Logger) (*Server, erro
 		"money":  func(m int64) string { return fmt.Sprintf("$%.2f", float64(m)/1_000_000) },
 		"tokens": formatTokens,
 		"short":  shortID,
+		"add":    func(a, b int) int { return a + b },
 		"ago":    func(t time.Time) string { return humanAgo(time.Since(t)) },
 		"ms": func(v int64) string {
 			if v >= 1000 {
@@ -251,10 +252,10 @@ func formatTokens(v int64) string {
 }
 func shortID(v string) string {
 	if len(v) > 12 {
-		return v[:12] + "…"
+		return v[:12] + "..."
 	}
 	if v == "" {
-		return "—"
+		return "-"
 	}
 	return v
 }
