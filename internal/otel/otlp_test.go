@@ -9,10 +9,10 @@ func TestDecodeAPIRequest(t *testing.T) {
 	payload := []byte(`{
       "resourceLogs":[{
         "resource":{"attributes":[
-          {"key":"meter.person","value":{"stringValue":"brandon"}},
-          {"key":"meter.device","value":{"stringValue":"brandons-macbook-pro"}},
+          {"key":"meter.person","value":{"stringValue":"developer-b"}},
+          {"key":"meter.device","value":{"stringValue":"laptop-b"}},
           {"key":"user.account_uuid","value":{"stringValue":"acct-uuid-2"}},
-          {"key":"user.email","value":{"stringValue":"brandon@example.com"}},
+          {"key":"user.email","value":{"stringValue":"dev-b@example.com"}},
           {"key":"session.id","value":{"stringValue":"sess-1"}}
         ]},
         "scopeLogs":[{"logRecords":[{
@@ -41,10 +41,10 @@ func TestDecodeAPIRequest(t *testing.T) {
 		t.Fatalf("want 1 event, got %d", len(events))
 	}
 	e := events[0]
-	if e.PersonID != "brandon" || e.DeviceName != "brandons-macbook-pro" {
+	if e.PersonID != "developer-b" || e.DeviceName != "laptop-b" {
 		t.Fatalf("bad identity: %+v", e)
 	}
-	if e.AccountUUID != "acct-uuid-2" || e.AccountEmail != "brandon@example.com" {
+	if e.AccountUUID != "acct-uuid-2" || e.AccountEmail != "dev-b@example.com" {
 		t.Fatalf("bad account: %+v", e)
 	}
 	if e.InputTokens != 12345 || e.OutputTokens != 678 || e.CacheReadTokens != 90000 {
