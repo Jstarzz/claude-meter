@@ -6,11 +6,11 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-	"os/exec"
 	"os/signal"
 	"strings"
 	"syscall"
 
+	claudebin "github.com/Jstarzz/claude-meter/internal/claude"
 	"github.com/Jstarzz/claude-meter/internal/config"
 	"github.com/Jstarzz/claude-meter/internal/identity"
 	"github.com/Jstarzz/claude-meter/internal/server"
@@ -114,7 +114,7 @@ func launch(args []string) {
 		"OTEL_RESOURCE_ATTRIBUTES":         identity.ResourceAttributes(id, os.Getenv("OTEL_RESOURCE_ATTRIBUTES")),
 	})
 
-	bin, err := exec.LookPath(cfg.ClaudeBinary)
+	bin, err := claudebin.Resolve(cfg.ClaudeBinary, fallbackBin)
 	if err != nil {
 		execClaude(fallbackBin, claudeArgs, os.Environ(), err)
 	}
@@ -163,10 +163,7 @@ func parseLaunchArgs(args []string) (string, string, []string) {
 }
 
 func execClaude(bin string, args, env []string, cause error) {
-	if strings.TrimSpace(bin) == "" {
-		fatal(cause)
-	}
-	resolved, err := exec.LookPath(bin)
+	resolved, err := claudebin.Resolve("", bin)
 	if err != nil {
 		fatal(fmt.Errorf("meter failed (%v), fallback Claude failed: %w", cause, err))
 	}
