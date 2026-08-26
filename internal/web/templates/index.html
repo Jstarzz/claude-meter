@@ -8,106 +8,139 @@
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-<main class="terminal">
-  <header class="cc-header">
-    <div class="cc-title"><span class="spark">✳</span><strong>Claude Meter</strong><span class="muted">usage console</span></div>
-    <div class="cc-status"><span>bughuntinc</span><span class="dot">●</span><span>live</span></div>
-  </header>
-
-  <section class="command-line">
-    <span class="prompt">›</span><span class="command">/usage</span>
-    <span class="command-note">Claude Code telemetry · refreshes every 20s</span>
-  </section>
-
-  <section class="usage-box">
-    <div class="usage-copy">
-      <div class="label">Claude Code usage</div>
-      <h1>{{if .Person}}{{.Person}}{{else}}Team overview{{end}}</h1>
-      <p>{{.Range}} window · {{.Totals.Sessions}} sessions · {{.Totals.Requests}} API requests</p>
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="product">
+      <span class="product-mark">✳</span>
+      <div><strong>Claude Meter</strong><span>Usage telemetry</span></div>
     </div>
-    <div class="usage-cost">
-      <span>API-equivalent spend</span>
-      <strong>{{money .Totals.CostUSDMicros}}</strong>
-      <small>estimated by Claude Code</small>
+
+    <nav class="side-nav" aria-label="Dashboard sections">
+      <a class="active" href="/?range={{.Range}}{{if .Person}}&person={{.Person}}{{end}}"><span>Overview</span></a>
+      <a href="#people"><span>People</span><small>{{len .People}}</small></a>
+      <a href="#accounts"><span>Accounts</span><small>{{len .Accounts}}</small></a>
+      <a href="#requests"><span>Requests</span><small>{{.Totals.Requests}}</small></a>
+    </nav>
+
+    <div class="sidebar-foot">
+      <div class="health"><span></span> Collector online</div>
+      <p>Prompt and response content is not collected.</p>
     </div>
-  </section>
+  </aside>
 
-  <nav class="range-line" aria-label="Time range">
-    <span class="range-label">range</span>
-    <a class="{{if eq .Range "24h"}}active{{end}}" href="/?range=24h{{if .Person}}&person={{.Person}}{{end}}">24h</a>
-    <a class="{{if eq .Range "7d"}}active{{end}}" href="/?range=7d{{if .Person}}&person={{.Person}}{{end}}">7d</a>
-    <a class="{{if eq .Range "30d"}}active{{end}}" href="/?range=30d{{if .Person}}&person={{.Person}}{{end}}">30d</a>
-    <a class="{{if eq .Range "all"}}active{{end}}" href="/?range=all{{if .Person}}&person={{.Person}}{{end}}">all</a>
-    {{if .Person}}<span class="divider">│</span><a class="clear" href="/?range={{.Range}}">clear person: {{.Person}} ×</a>{{end}}
-  </nav>
-
-  <section class="stats">
-    <div><span>Requests</span><strong>{{.Totals.Requests}}</strong><small>{{.Totals.Sessions}} sessions</small></div>
-    <div><span>Input</span><strong>{{tokens .Totals.InputTokens}}</strong><small>tokens</small></div>
-    <div><span>Output</span><strong>{{tokens .Totals.OutputTokens}}</strong><small>tokens</small></div>
-    <div><span>Cache read</span><strong>{{tokens .Totals.CacheReadTokens}}</strong><small>tokens</small></div>
-    <div><span>Cache write</span><strong>{{tokens .Totals.CacheCreationTokens}}</strong><small>tokens</small></div>
-  </section>
-
-  <section class="split">
-    <div class="section team-section">
-      <div class="section-title"><span class="bullet">●</span><strong>Team</strong><span>token-maxxing leaderboard</span></div>
-      <div class="menu">
-        {{range .People}}
-        <a class="menu-row {{if eq $.Person .Person}}selected{{end}}" href="/?range={{$.Range}}&person={{.Person}}">
-          <span class="caret">{{if eq $.Person .Person}}❯{{else}} {{end}}</span>
-          <span class="rank">#</span>
-          <span class="person">{{.Person}}<small>{{.Sessions}} sessions · {{.Requests}} req</small></span>
-          <span class="out">{{tokens .OutputTokens}} out</span>
-          <strong>{{money .CostUSDMicros}}</strong>
-        </a>
-        {{else}}<div class="empty">No usage in this range.</div>{{end}}
+  <main class="workspace">
+    <header class="topbar">
+      <div class="heading">
+        <div class="breadcrumb">Usage <span>/</span> Overview</div>
+        <h1>{{if .Person}}{{.Person}}{{else}}Team usage{{end}}</h1>
+        <p>Claude Code requests, token usage, accounts, and estimated API-equivalent spend.</p>
       </div>
+      <div class="top-actions">
+        {{if .Person}}<a class="person-filter" href="/?range={{.Range}}"><span>Person</span>{{.Person}} <b>×</b></a>{{end}}
+        <span class="updated">Updated {{.Generated.Format "15:04:05"}}</span>
+      </div>
+    </header>
+
+    <nav class="range-tabs" aria-label="Time range">
+      <a class="{{if eq .Range "24h"}}active{{end}}" href="/?range=24h{{if .Person}}&person={{.Person}}{{end}}">24 hours</a>
+      <a class="{{if eq .Range "7d"}}active{{end}}" href="/?range=7d{{if .Person}}&person={{.Person}}{{end}}">7 days</a>
+      <a class="{{if eq .Range "30d"}}active{{end}}" href="/?range=30d{{if .Person}}&person={{.Person}}{{end}}">30 days</a>
+      <a class="{{if eq .Range "all"}}active{{end}}" href="/?range=all{{if .Person}}&person={{.Person}}{{end}}">All time</a>
+    </nav>
+
+    <section class="summary" aria-label="Usage summary">
+      <div class="summary-primary">
+        <span class="metric-label">API-equivalent spend</span>
+        <strong>{{money .Totals.CostUSDMicros}}</strong>
+        <small>Estimated by Claude Code</small>
+      </div>
+      <div class="summary-metrics">
+        <div><span class="metric-label">Requests</span><strong>{{.Totals.Requests}}</strong><small>{{.Totals.Sessions}} sessions</small></div>
+        <div><span class="metric-label">Input</span><strong>{{tokens .Totals.InputTokens}}</strong><small>tokens</small></div>
+        <div><span class="metric-label">Output</span><strong>{{tokens .Totals.OutputTokens}}</strong><small>tokens</small></div>
+        <div><span class="metric-label">Cache read</span><strong>{{tokens .Totals.CacheReadTokens}}</strong><small>tokens</small></div>
+        <div><span class="metric-label">Cache write</span><strong>{{tokens .Totals.CacheCreationTokens}}</strong><small>tokens</small></div>
+      </div>
+    </section>
+
+    <div class="section-grid">
+      <section class="surface" id="people">
+        <div class="surface-head">
+          <div><span class="eyebrow">People</span><h2>Usage leaderboard</h2></div>
+          <span>Sorted by spend</span>
+        </div>
+        <div class="leaderboard">
+          {{range $i, $p := .People}}
+          <a class="leader-row {{if eq $.Person .Person}}selected{{end}}" href="/?range={{$.Range}}&person={{.Person}}">
+            <span class="leader-rank">{{printf "%02d" (add $i 1)}}</span>
+            <span class="leader-avatar">{{printf "%.1s" .Person}}</span>
+            <span class="leader-name"><strong>{{.Person}}</strong><small>{{.Sessions}} sessions · {{.Requests}} requests</small></span>
+            <span class="leader-output"><small>Output</small><strong>{{tokens .OutputTokens}}</strong></span>
+            <span class="leader-spend">{{money .CostUSDMicros}}</span>
+          </a>
+          {{else}}<div class="empty-state">No usage recorded for this range.</div>{{end}}
+        </div>
+      </section>
+
+      <section class="surface" id="accounts">
+        <div class="surface-head">
+          <div><span class="eyebrow">Identity</span><h2>Claude accounts</h2></div>
+          <span>{{if .Person}}Filtered to {{.Person}}{{else}}OAuth attribution{{end}}</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Account</th><th>Requests</th><th>Sessions</th><th>Output</th><th>Cache read</th><th class="numeric">Spend</th></tr></thead>
+            <tbody>
+              {{range .Accounts}}
+              <tr>
+                <td><strong>{{if .AccountEmail}}{{.AccountEmail}}{{else}}{{short .AccountUUID}}{{end}}</strong><small>{{short .AccountUUID}}</small></td>
+                <td>{{.Requests}}</td>
+                <td>{{.Sessions}}</td>
+                <td>{{tokens .OutputTokens}}</td>
+                <td>{{tokens .CacheReadTokens}}</td>
+                <td class="numeric spend">{{money .CostUSDMicros}}</td>
+              </tr>
+              {{else}}<tr><td colspan="6" class="empty-state">No account usage recorded.</td></tr>{{end}}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
 
-    <div class="section account-section">
-      <div class="section-title"><span class="bullet">●</span><strong>Accounts</strong><span>Claude OAuth identity</span></div>
+    <section class="surface requests" id="requests">
+      <div class="surface-head">
+        <div><span class="eyebrow">Activity</span><h2>Recent API requests</h2></div>
+        <span>Latest 100 events</span>
+      </div>
       <div class="table-wrap">
-        <table>
-          <thead><tr><th>Account</th><th>Req</th><th>Sessions</th><th>Output</th><th>Cache</th><th class="num">Spend</th></tr></thead>
+        <table class="request-table">
+          <thead><tr><th>When</th><th>Person</th><th>Account</th><th>Model</th><th>Session</th><th class="numeric">Input</th><th class="numeric">Output</th><th class="numeric">Cache</th><th class="numeric">Latency</th><th class="numeric">Spend</th></tr></thead>
           <tbody>
-            {{range .Accounts}}
-            <tr>
-              <td><strong>{{if .AccountEmail}}{{.AccountEmail}}{{else}}{{short .AccountUUID}}{{end}}</strong><small>{{short .AccountUUID}}</small></td>
-              <td>{{.Requests}}</td><td>{{.Sessions}}</td><td>{{tokens .OutputTokens}}</td><td>{{tokens .CacheReadTokens}}</td><td class="num cost">{{money .CostUSDMicros}}</td>
+            {{range .History}}
+            <tr class="{{if eq .EventName "api_error"}}error{{end}}">
+              <td class="mono subtle">{{ago .Time}}</td>
+              <td><strong>{{.Person}}</strong><small>{{.Device}}</small></td>
+              <td class="account-cell">{{if .AccountEmail}}{{.AccountEmail}}{{else}}{{short .AccountUUID}}{{end}}</td>
+              <td><strong class="mono model">{{.Model}}</strong><small>{{if .Effort}}{{.Effort}}{{if .QuerySource}} · {{end}}{{end}}{{.QuerySource}}</small></td>
+              <td class="mono subtle">{{short .SessionID}}</td>
+              <td class="numeric">{{tokens .InputTokens}}</td>
+              <td class="numeric">{{tokens .OutputTokens}}</td>
+              <td class="numeric">{{tokens .CacheReadTokens}}</td>
+              <td class="numeric">{{ms .DurationMS}}</td>
+              <td class="numeric spend">{{if eq .EventName "api_error"}}ERR{{else}}{{money .CostUSDMicros}}{{end}}</td>
             </tr>
-            {{else}}<tr><td colspan="6" class="empty">No account usage.</td></tr>{{end}}
+            {{else}}<tr><td colspan="10" class="empty-state">No telemetry has arrived yet.</td></tr>{{end}}
           </tbody>
         </table>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <section class="section activity-section">
-    <div class="section-title"><span class="bullet">●</span><strong>Recent API requests</strong><span>latest 100 events</span></div>
-    <div class="table-wrap">
-      <table class="activity-table">
-        <thead><tr><th>When</th><th>Person</th><th>Account</th><th>Model</th><th>Session</th><th class="num">In</th><th class="num">Out</th><th class="num">Cache</th><th class="num">Time</th><th class="num">Cost</th></tr></thead>
-        <tbody>
-          {{range .History}}
-          <tr class="{{if eq .EventName "api_error"}}error{{end}}">
-            <td class="mono muted">{{ago .Time}}</td>
-            <td><strong>{{.Person}}</strong><small>{{.Device}}</small></td>
-            <td class="account">{{if .AccountEmail}}{{.AccountEmail}}{{else}}{{short .AccountUUID}}{{end}}</td>
-            <td><strong class="mono">{{.Model}}</strong><small>{{if .Effort}}{{.Effort}}{{if .QuerySource}} · {{end}}{{end}}{{.QuerySource}}</small></td>
-            <td class="mono muted">{{short .SessionID}}</td>
-            <td class="num">{{tokens .InputTokens}}</td><td class="num">{{tokens .OutputTokens}}</td><td class="num">{{tokens .CacheReadTokens}}</td><td class="num">{{ms .DurationMS}}</td>
-            <td class="num cost">{{if eq .EventName "api_error"}}ERR{{else}}{{money .CostUSDMicros}}{{end}}</td>
-          </tr>
-          {{else}}<tr><td colspan="10" class="empty">No telemetry has arrived yet.</td></tr>{{end}}
-        </tbody>
-      </table>
-    </div>
-  </section>
-
-  <footer class="help-line">
-    <span><b>click</b> person to filter</span><span>·</span><span><b>20s</b> auto-refresh</span><span>·</span><span>prompt/response/tool content <b>not collected</b></span><span class="grow"></span><span>{{.Generated.Format "15:04:05 MST"}}</span>
-  </footer>
-</main>
+    <footer>
+      <span>Claude Meter</span>
+      <span>Auto-refresh every 20 seconds</span>
+      <span>No prompt, response, tool argument, or raw API body content collected</span>
+    </footer>
+  </main>
+</div>
 </body>
 </html>
