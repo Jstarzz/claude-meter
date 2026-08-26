@@ -1,4 +1,4 @@
-.PHONY: build test vet check
+.PHONY: build test vet scripts check
 
 build:
 	CGO_ENABLED=1 go build -trimpath -ldflags='-s -w' -o claude-meter ./cmd/claude-meter
@@ -9,4 +9,7 @@ test:
 vet:
 	CGO_ENABLED=1 go vet ./...
 
-check: test vet build
+scripts:
+	sh -n scripts/*.sh
+
+check: test vet scripts build
