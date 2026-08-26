@@ -2,13 +2,14 @@
 Description=Claude Code usage meter
 After=network-online.target
 Wants=network-online.target
+StartLimitIntervalSec=0
 
 [Service]
 Type=simple
 User=claude-meter
 Group=claude-meter
 ExecStart=/usr/local/bin/claude-meter serve -config /etc/claude-meter/server.json
-Restart=on-failure
+Restart=always
 RestartSec=2
 NoNewPrivileges=true
 PrivateTmp=true
