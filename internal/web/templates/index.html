@@ -5,30 +5,32 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="refresh" content="20">
   <title>{{.Title}}</title>
-  <link rel="stylesheet" href="/static/style.css?v=20260826-1">
+  <script src="/static/app.js?v=20260826-2"></script>
+  <link rel="stylesheet" href="/static/style.css?v=20260826-2">
 </head>
 <body>
+<a class="skip-link" href="#main-content">Skip to content</a>
 <div class="app-shell">
   <aside class="sidebar">
     <div class="product">
-      <span class="product-mark">✳</span>
+      <span class="product-mark" aria-hidden="true">✳</span>
       <div><strong>Claude Meter</strong><span>Usage telemetry</span></div>
     </div>
 
     <nav class="side-nav" aria-label="Dashboard sections">
-      <a class="active" href="/?range={{.Range}}{{if .Person}}&person={{.Person}}{{end}}"><span>Overview</span></a>
+      <a class="active" href="#overview"><span>Overview</span></a>
       <a href="#people"><span>People</span><small>{{len .People}}</small></a>
       <a href="#accounts"><span>Accounts</span><small>{{len .Accounts}}</small></a>
       <a href="#requests"><span>Requests</span><small>{{.Totals.Requests}}</small></a>
     </nav>
 
     <div class="sidebar-foot">
-      <div class="health"><span></span> Collector online</div>
+      <div class="health"><span aria-hidden="true"></span> Collector online</div>
       <p>Prompt and response content is not collected.</p>
     </div>
   </aside>
 
-  <main class="workspace">
+  <main class="workspace" id="main-content">
     <header class="topbar">
       <div class="heading">
         <div class="breadcrumb">Usage <span>/</span> Overview</div>
@@ -37,18 +39,27 @@
       </div>
       <div class="top-actions">
         {{if .Person}}<a class="person-filter" href="/?range={{.Range}}"><span>Person</span>{{.Person}} <b>×</b></a>{{end}}
+        <button class="toolbar-button" type="button" data-refresh aria-label="Refresh dashboard">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8.1 8.1 0 1 0 2 5.3"/><path d="M20 4v7h-7"/></svg>
+          <span>Refresh</span>
+        </button>
+        <button class="toolbar-button theme-button" type="button" data-theme-toggle aria-label="Switch to dark mode" aria-pressed="false">
+          <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/></svg>
+          <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41"/></svg>
+          <span data-theme-label>Dark</span>
+        </button>
         <span class="updated">Updated {{.Generated.Format "15:04:05"}}</span>
       </div>
     </header>
 
     <nav class="range-tabs" aria-label="Time range">
-      <a class="{{if eq .Range "24h"}}active{{end}}" href="/?range=24h{{if .Person}}&person={{.Person}}{{end}}">24 hours</a>
-      <a class="{{if eq .Range "7d"}}active{{end}}" href="/?range=7d{{if .Person}}&person={{.Person}}{{end}}">7 days</a>
-      <a class="{{if eq .Range "30d"}}active{{end}}" href="/?range=30d{{if .Person}}&person={{.Person}}{{end}}">30 days</a>
-      <a class="{{if eq .Range "all"}}active{{end}}" href="/?range=all{{if .Person}}&person={{.Person}}{{end}}">All time</a>
+      <a class="{{if eq .Range "24h"}}active{{end}}" {{if eq .Range "24h"}}aria-current="page"{{end}} href="/?range=24h{{if .Person}}&person={{.Person}}{{end}}">24 hours</a>
+      <a class="{{if eq .Range "7d"}}active{{end}}" {{if eq .Range "7d"}}aria-current="page"{{end}} href="/?range=7d{{if .Person}}&person={{.Person}}{{end}}">7 days</a>
+      <a class="{{if eq .Range "30d"}}active{{end}}" {{if eq .Range "30d"}}aria-current="page"{{end}} href="/?range=30d{{if .Person}}&person={{.Person}}{{end}}">30 days</a>
+      <a class="{{if eq .Range "all"}}active{{end}}" {{if eq .Range "all"}}aria-current="page"{{end}} href="/?range=all{{if .Person}}&person={{.Person}}{{end}}">All time</a>
     </nav>
 
-    <section class="summary" aria-label="Usage summary">
+    <section class="summary" id="overview" aria-label="Usage summary">
       <div class="summary-primary">
         <span class="metric-label">API-equivalent spend</span>
         <strong>{{money .Totals.CostUSDMicros}}</strong>
@@ -78,7 +89,7 @@
             <span class="leader-output"><small>Output</small><strong>{{tokens .OutputTokens}}</strong></span>
             <span class="leader-spend">{{money .CostUSDMicros}}</span>
           </a>
-          {{else}}<div class="empty-state">No usage recorded for this range.</div>{{end}}
+          {{else}}<div class="empty-state"><strong>No usage yet</strong><span>Start a metered Claude Code session and activity will appear here.</span></div>{{end}}
         </div>
       </section>
 
@@ -100,7 +111,7 @@
                 <td>{{tokens .CacheReadTokens}}</td>
                 <td class="numeric spend">{{money .CostUSDMicros}}</td>
               </tr>
-              {{else}}<tr><td colspan="6" class="empty-state">No account usage recorded.</td></tr>{{end}}
+              {{else}}<tr><td colspan="6" class="empty-state"><strong>No accounts yet</strong><span>Account attribution appears after the first Claude API request is received.</span></td></tr>{{end}}
             </tbody>
           </table>
         </div>
@@ -129,7 +140,7 @@
               <td class="numeric">{{ms .DurationMS}}</td>
               <td class="numeric spend">{{if eq .EventName "api_error"}}ERR{{else}}{{money .CostUSDMicros}}{{end}}</td>
             </tr>
-            {{else}}<tr><td colspan="10" class="empty-state">No telemetry has arrived yet.</td></tr>{{end}}
+            {{else}}<tr><td colspan="10" class="empty-state"><strong>No requests yet</strong><span>Recent Claude API requests will appear here automatically.</span></td></tr>{{end}}
           </tbody>
         </table>
       </div>
