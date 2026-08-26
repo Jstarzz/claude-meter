@@ -26,6 +26,11 @@ exec /usr/local/lib/claude-meter/claude-meter launch -config /etc/claude-meter/l
 SH
 chmod 0755 /usr/local/bin/claude
 
-echo "Installed metered /usr/local/bin/claude -> $REAL_CLAUDE"
+if [ "$REQUESTED_CLAUDE" != "/usr/local/bin/claude" ]; then
+  rm -f "$REQUESTED_CLAUDE"
+  ln -s /usr/local/bin/claude "$REQUESTED_CLAUDE"
+fi
+
+echo "Installed metered Claude launcher -> $REAL_CLAUDE"
 echo "Edit /etc/claude-meter/launcher.json, then test from an SSH session with:"
 echo "  /usr/local/lib/claude-meter/claude-meter identify -config /etc/claude-meter/launcher.json"
