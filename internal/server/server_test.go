@@ -41,7 +41,7 @@ func TestDashboardControlsRender(t *testing.T) {
 		t.Fatalf("status %d", res.Code)
 	}
 	body := res.Body.String()
-	for _, want := range []string{"data-theme-toggle", "data-refresh", "#overview", "/static/app.js"} {
+	for _, want := range []string{"data-theme-toggle", "data-refresh", "#overview", "#efficiency", "data-efficiency", "/static/app.js"} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("dashboard missing %q", want)
 		}
@@ -56,11 +56,15 @@ func TestDashboardScriptAndCSP(t *testing.T) {
 	if res.Code != http.StatusOK {
 		t.Fatalf("status %d", res.Code)
 	}
+	body := res.Body.String()
+	if !strings.Contains(body, "claude-meter-theme") {
+		t.Fatal("theme behavior missing")
+	}
+	if !strings.Contains(body, "cacheReuseRate") {
+		t.Fatal("efficiency calculation missing")
+	}
 	if got := res.Header().Get("Content-Type"); !strings.HasPrefix(got, "text/javascript") {
 		t.Fatalf("content type %q", got)
-	}
-	if !strings.Contains(res.Body.String(), "claude-meter-theme") {
-		t.Fatal("theme behavior missing")
 	}
 	csp := res.Header().Get("Content-Security-Policy")
 	if !strings.Contains(csp, "script-src 'self'") {

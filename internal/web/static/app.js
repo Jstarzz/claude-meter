@@ -15,6 +15,7 @@
     const refreshButton = document.querySelector("[data-refresh]");
     const navLinks = Array.from(document.querySelectorAll('.side-nav a[href^="#"]'));
     const summary = document.getElementById("overview");
+    const efficiency = document.getElementById("efficiency");
     const people = document.getElementById("people");
     const accounts = document.getElementById("accounts");
     const requests = document.getElementById("requests");
@@ -24,11 +25,15 @@
     const breadcrumb = document.querySelector(".breadcrumb");
     const baseDocumentTitle = document.title;
     const overviewTitle = headingTitle ? headingTitle.textContent : "Team usage";
-    const validViews = new Set(["overview", "people", "accounts", "requests"]);
+    const validViews = new Set(["overview", "efficiency", "people", "accounts", "requests"]);
     const viewCopy = {
       overview: {
         title: overviewTitle,
         description: "Claude Code requests, token usage, accounts, and estimated API-equivalent spend."
+      },
+      efficiency: {
+        title: "Efficiency",
+        description: "Measure cache reuse, context churn, tokens per request, and API-equivalent cost efficiency."
       },
       people: {
         title: "People",
@@ -52,6 +57,67 @@
       }
       if (themeLabel) {
         themeLabel.textContent = dark ? "Light" : "Dark";
+      }
+    }
+
+    function formatTokens(value) {
+      if (!Number.isFinite(value) || value <= 0) return "0";
+      if (value >= 1e9) return (value / 1e9).toFixed(2) + "B";
+      if (value >= 1e6) return (value / 1e6).toFixed(2) + "M";
+      if (value >= 1e3) return (value / 1e3).toFixed(1) + "K";
+      return Math.round(value).toString();
+    }
+
+    function formatUSD(value) {
+      if (!Number.isFinite(value) || value <= 0) return "$0.00";
+      return "$" + value.toFixed(value < 1 ? 3 : 2);
+    }
+
+    function setEfficiencyValue(name, value) {
+      if (!efficiency) return;
+      const node = efficiency.querySelector('[data-efficiency-value="' + name + '"]');
+      if (node) node.textContent = value;
+    }
+
+    function renderEfficiency() {
+      if (!efficiency) return;
+
+      const requestCount = Number(efficiency.dataset.requests) || 0;
+      const inputTokens = Number(efficiency.dataset.input) || 0;
+      const outputTokens = Number(efficiency.dataset.output) || 0;
+      const cacheReadTokens = Number(efficiency.dataset.cacheRead) || 0;
+      const cacheWriteTokens = Number(efficiency.dataset.cacheWrite) || 0;
+      const costMicros = Number(efficiency.dataset.costMicros) || 0;
+      const cacheDenominator = cacheReadTokens + cacheWriteTokens + inputTokens;
+      const newContextTokens = cacheWriteTokens + inputTokens;
+      const cacheReuseRate = cacheDenominator > 0 ? (cacheReadTokens / cacheDenominator) * 100 : 0;
+      const reuseMultiple = newContextTokens > 0 ? cacheReadTokens / newContextTokens : 0;
+      const cachedPerRequest = requestCount > 0 ? cacheReadTokens / requestCount : 0;
+      const inputPerRequest = requestCount > 0 ? inputTokens / requestCount : 0;
+      const outputPerRequest = requestCount > 0 ? outputTokens / requestCount : 0;
+      const spendPerRequest = requestCount > 0 ? costMicros / 1e6 / requestCount : 0;
+
+      setEfficiencyValue("cache-hit", cacheReuseRate.toFixed(2) + "%");
+      setEfficiencyValue("reuse-multiple", reuseMultiple.toFixed(reuseMultiple >= 100 ? 0 : 1) + "x");
+      setEfficiencyValue("cached-per-request", formatTokens(cachedPerRequest));
+      setEfficiencyValue("input-per-request", formatTokens(inputPerRequest));
+      setEfficiencyValue("output-per-request", formatTokens(outputPerRequest));
+      setEfficiencyValue("spend-per-request", formatUSD(spendPerRequest));
+
+      const copy = efficiency.querySelector("[data-efficiency-copy]");
+      if (!copy) return;
+      if (requestCount === 0) {
+        copy.textContent = "No API requests in this range yet.";
+      } else if (cacheReuseRate >= 99) {
+        copy.textContent = "Excellent cache reuse. Keep useful sessions warm and clear at task boundaries, not just because a chat is long. Cache reuse proxy = read / (read + write + uncached input).";
+      } else if (cacheReuseRate >= 95) {
+        copy.textContent = "Strong cache reuse. Long sessions are paying off; clear when context becomes stale or the task changes. Cache reuse proxy = read / (read + write + uncached input).";
+      } else if (cacheReuseRate >= 85) {
+        copy.textContent = "Good cache reuse. Watch cache writes and fresh input for signs that context is being rebuilt too often. Cache reuse proxy = read / (read + write + uncached input).";
+      } else if (cacheReuseRate >= 60) {
+        copy.textContent = "Mixed cache reuse. Session churn, changing prompt prefixes, or frequent clears may be rebuilding context. Cache reuse proxy = read / (read + write + uncached input).";
+      } else {
+        copy.textContent = "Low cache reuse. Check for short-lived sessions, frequent clears, or unstable prompt prefixes. Cache reuse proxy = read / (read + write + uncached input).";
       }
     }
 
@@ -88,12 +154,13 @@
       if (!validViews.has(view)) view = "overview";
 
       if (summary) summary.hidden = view !== "overview";
+      if (efficiency) efficiency.hidden = view !== "overview" && view !== "efficiency";
       if (people) people.hidden = view !== "overview" && view !== "people";
       if (accounts) accounts.hidden = view !== "overview" && view !== "accounts";
       if (requests) requests.hidden = view !== "overview" && view !== "requests";
 
       if (sectionGrid) {
-        sectionGrid.hidden = view === "requests";
+        sectionGrid.hidden = view === "efficiency" || view === "requests";
         sectionGrid.style.gridTemplateColumns = view === "overview" ? "" : "minmax(0, 1fr)";
       }
 
@@ -146,6 +213,7 @@
       renderView(viewFromLocation());
     });
 
+    renderEfficiency();
     renderView(viewFromLocation());
     syncTheme();
   }

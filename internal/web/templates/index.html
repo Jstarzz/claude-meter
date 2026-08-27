@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="refresh" content="20">
   <title>{{.Title}}</title>
-  <script src="/static/app.js?v=20260826-3"></script>
+  <script src="/static/app.js?v=20260827-1"></script>
   <link rel="stylesheet" href="/static/style.css?v=20260826-2">
 </head>
 <body>
@@ -19,6 +19,7 @@
 
     <nav class="side-nav" aria-label="Dashboard sections">
       <a class="active" href="#overview"><span>Overview</span></a>
+      <a href="#efficiency"><span>Efficiency</span></a>
       <a href="#people"><span>People</span><small>{{len .People}}</small></a>
       <a href="#accounts"><span>Accounts</span><small>{{len .Accounts}}</small></a>
       <a href="#requests"><span>Requests</span><small>{{.Totals.Requests}}</small></a>
@@ -71,6 +72,28 @@
         <div><span class="metric-label">Output</span><strong>{{tokens .Totals.OutputTokens}}</strong><small>tokens</small></div>
         <div><span class="metric-label">Cache read</span><strong>{{tokens .Totals.CacheReadTokens}}</strong><small>tokens</small></div>
         <div><span class="metric-label">Cache write</span><strong>{{tokens .Totals.CacheCreationTokens}}</strong><small>tokens</small></div>
+      </div>
+    </section>
+
+    <section class="summary" id="efficiency" aria-label="Efficiency breakdown"
+      data-efficiency
+      data-requests="{{.Totals.Requests}}"
+      data-input="{{.Totals.InputTokens}}"
+      data-output="{{.Totals.OutputTokens}}"
+      data-cache-read="{{.Totals.CacheReadTokens}}"
+      data-cache-write="{{.Totals.CacheCreationTokens}}"
+      data-cost-micros="{{.Totals.CostUSDMicros}}">
+      <div class="summary-primary">
+        <span class="metric-label">Cache hit rate</span>
+        <strong data-efficiency-value="cache-hit">--</strong>
+        <small data-efficiency-copy>Cache read / (cache read + cache write + uncached input)</small>
+      </div>
+      <div class="summary-metrics">
+        <div><span class="metric-label">Reuse multiple</span><strong data-efficiency-value="reuse-multiple">--</strong><small>cached reads vs new context</small></div>
+        <div><span class="metric-label">Cached / request</span><strong data-efficiency-value="cached-per-request">--</strong><small>tokens reused per API call</small></div>
+        <div><span class="metric-label">Fresh input / request</span><strong data-efficiency-value="input-per-request">--</strong><small>uncached tokens per API call</small></div>
+        <div><span class="metric-label">Output / request</span><strong data-efficiency-value="output-per-request">--</strong><small>generated tokens per API call</small></div>
+        <div><span class="metric-label">Spend / request</span><strong data-efficiency-value="spend-per-request">--</strong><small>API-equivalent average</small></div>
       </div>
     </section>
 
